@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Bot200 - ChatCraft Tarzı Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Minecraft', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideDown 0.5s ease;
+        }
+
+        .header h1 {
+            color: #00ff00;
+            font-size: 48px;
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        .status-bar {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            animation: slideUp 0.5s ease;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            color: #00ff00;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .status-value.danger {
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        .status-value.warning {
+            color: #ffaa00;
+            text-shadow: 0 0 5px #ffaa00;
+        }
+
+        .gui-modal {
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #00ff00;
+            padding: 0;
+            border-radius: 0;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            animation: popIn 0.3s ease;
+            display: none;
+        }
+
+        .gui-modal.active {
+            display: block;
+        }
+
+        .gui-header {
+            background: linear-gradient(90deg, #00ff00 0%, #00aa00 100%);
+            color: #000;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 18px;
+            border-bottom: 2px solid #00ff00;
+        }
+
+        .gui-subtitle {
+            color: #888;
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+
+        .gui-content {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .menu-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-item {
+            background: rgba(50, 50, 50, 0.8);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Minecraft', monospace;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-item:hover {
+            background: #00ff00;
+            color: #000;
+            transform: translateX(5px);
+            text-shadow: none;
+        }
+
+        .menu-item.selected {
+            background: #00ff00;
+            color: #000;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .menu-item-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .menu-item-label {
+            flex: 1;
+        }
+
+        .menu-item-info {
+            color: #888;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .menu-item:hover .menu-item-info {
+            color: #000;
+        }
+
+        /* Bot Kontrol Bölümü */
+        .bot-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .control-btn:hover {
+            background: #00ff00;
+            color: #000;
+            text-shadow: none;
+            transform: scale(1.05);
+        }
+
+        .control-btn.danger {
+            border-color: #ff0000;
+            color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        .control-btn.danger:hover {
+            background: #ff0000;
+            color: #fff;
+        }
+
+        /* Main Menu */
+        .main-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .menu-button {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 24px;
+            font-weight: bold;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .menu-button:hover {
+            background: #00ff00;
+            color: #000;
+            transform: scale(1.05);
+            text-shadow: none;
+        }
+
+        .menu-button-label {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Chat Input */
+        .chat-input-section {
+            margin-top: 20px;
+        }
+
+        .chat-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px;
+            font-family: 'Minecraft', monospace;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .send-btn {
+            width: 100%;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .send-btn:hover {
+            background: #00ff00;
+            color: #000;
+            text-shadow: none;
+        }
+
+        /* Log Panel */
+        .log-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #00ff00;
+            border-radius: 0;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+            padding: 2px;
+        }
+
+        .log-line.error {
+            color: #ff0000;
+        }
+
+        .log-line.warning {
+            color: #ffaa00;
+        }
+
+        .log-line.success {
+            color: #00ff00;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 36px;
+            }
+
+            .main-menu {
+                grid-template-columns: 1fr;
+            }
+
+            .status-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .menu-button {
+                min-height: 60px;
+                font-size: 20px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00dd00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 AI-BOT200</h1>
+            <p>> INITIALIZING SYSTEM...</p>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-label">HEALTH</div>
+                <div class="status-value" id="healthValue">20/20 ❤️</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">HUNGER</div>
+                <div class="status-value" id="hungerValue">20/20 🍖</div>
+            </div>
+            <div class="status-item">
+                <div class="status-label">STATUS</div>
+                <div class="status-value" id="botStatus">⚙️ INIT</div>
+            </div>
+        </div>
+
+        <!-- Bot Controls -->
+        <div class="bot-controls">
+            <button class="control-btn" id="startBtn" onclick="startBot()">▶ START BOT</button>
+            <button class="control-btn danger" id="stopBtn" onclick="stopBot()">⏹ STOP BOT</button>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="mainMenu" class="gui-modal active">
+            <div class="gui-header">
+                🤖 MAIN MENU
+                <div class="gui-subtitle">> Select an option below</div>
+            </div>
+            <div class="gui-content">
+                <div class="main-menu">
+                    <div class="menu-button" onclick="openMenu('chat')">💬<div class="menu-button-label">CHAT</div></div>
+                    <div class="menu-button" onclick="openMenu('mining')">⛏️<div class="menu-button-label">MINING</div></div>
+                    <div class="menu-button" onclick="openMenu('farming')">🌾<div class="menu-button-label">FARMING</div></div>
+                    <div class="menu-button" onclick="openMenu('fishing')">🐟<div class="menu-button-label">FISHING</div></div>
+                    <div class="menu-button" onclick="openMenu('combat')">⚔️<div class="menu-button-label">COMBAT</div></div>
+                    <div class="menu-button" onclick="openMenu('npc')">👥<div class="menu-button-label">NPC</div></div>
+                    <div class="menu-button" onclick="openMenu('quests')">📋<div class="menu-button-label">QUESTS</div></div>
+                    <div class="menu-button" onclick="openMenu('economy')">💰<div class="menu-button-label">ECONOMY</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Menu -->
+        <div id="dynamicMenu" class="gui-modal" style="display: none;">
+            <div class="gui-header" id="menuTitle">MENU
+                <div class="gui-subtitle" id="menuSubtitle"></div>
+            </div>
+            <div class="gui-content">
+                <div class="menu-items" id="menuItems"></div>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-input-section">
+            <input type="text" class="chat-input" id="chatInput" placeholder="> type command or !menu">
+            <button class="send-btn" onclick="sendCommand()">📤 SEND</button>
+        </div>
+
+        <!-- Log Panel -->
+        <div class="log-panel" id="logPanel">
+            <div class="log-line">> System initialized</div>
+            <div class="log-line">> Ready for commands</div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let botRunning = false;
+        let currentMenu = null;
+
+        // Status güncellemesi
+        socket.on('bot-status', (data) => {
+            document.getElementById('healthValue').textContent = `${Math.ceil(data.health || 20)}/20 ❤️`;
+            document.getElementById('hungerValue').textContent = `${Math.ceil(data.food || 20)}/20 🍖`;
+            document.getElementById('botStatus').textContent = data.online ? '✅ ONLINE' : '❌ OFFLINE';
+            botRunning = data.online;
+        });
+
+        // GUI Menüsü al
+        socket.on('gui-menu', (menu) => {
+            displayMenu(menu);
+        });
+
+        // Log mesajı
+        socket.on('bot-log', (log) => {
+            addLog(log.message, log.type);
+        });
+
+        function startBot() {
+            socket.emit('start-bot');
+            addLog('Starting bot...', 'info');
+        }
+
+        function stopBot() {
+            socket.emit('stop-bot');
+            addLog('Stopping bot...', 'warning');
+        }
+
+        function openMenu(menuType) {
+            socket.emit('send-command', `/menu ${menuType}`);
+        }
+
+        function displayMenu(menu) {
+            const dynamicMenu = document.getElementById('dynamicMenu');
+            const mainMenu = document.getElementById('mainMenu');
+            const menuTitle = document.getElementById('menuTitle');
+            const menuSubtitle = document.getElementById('menuSubtitle');
+            const menuItems = document.getElementById('menuItems');
+
+            menuTitle.textContent = menu.title;
+            menuSubtitle.textContent = menu.subtitle || '> Select an option';
+            menuItems.innerHTML = menu.options.map((opt, idx) => `
+                <div class="menu-item" onclick="selectMenuItem('${opt.id}', '${menu.title}')">
+                    <div class="menu-item-label">${opt.label}</div>
+                </div>
+            `).join('');
+
+            mainMenu.classList.remove('active');
+            dynamicMenu.classList.add('active');
+            addLog(`Menu opened: ${menu.title}`, 'success');
+        }
+
+        function selectMenuItem(id, menuTitle) {
+            socket.emit('send-command', `/select ${id}`);
+            document.getElementById('dynamicMenu').classList.remove('active');
+            document.getElementById('mainMenu').classList.add('active');
+            addLog(`Selected: ${menuTitle} - Option #${id}`, 'info');
+        }
+
+        function sendCommand() {
+            const input = document.getElementById('chatInput');
+            const command = input.value.trim();
+            if (!command) return;
+
+            if (command.startsWith('!menu')) {
+                const menuType = command.slice(6).trim() || 'main';
+                openMenu(menuType);
+            } else if (command.startsWith('/')) {
+                socket.emit('send-command', command);
+            } else {
+                socket.emit('send-command', `/msg ${command}`);
+            }
+
+            addLog(`> ${command}`, 'info');
+            input.value = '';
+        }
+
+        function addLog(message, type = 'info') {
+            const logPanel = document.getElementById('logPanel');
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            line.textContent = `> ${message}`;
+            logPanel.appendChild(line);
+            logPanel.scrollTop = logPanel.scrollHeight;
+
+            if (logPanel.children.length > 50) {
+                logPanel.removeChild(logPanel.firstChild);
+            }
+        }
+
+        // Enter tuşuyla gönder
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendCommand();
+        });
+
+        // Başlangıç
+        addLog('System online', 'success');
+        addLog('Type command or use menus', 'info');
+    </script>
+</body>
+</html>
