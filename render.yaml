@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ai-bot200
+    env: node
+    plan: standard
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 18.16.0
+    healthCheckPath: /api/status
+    numInstances: 1

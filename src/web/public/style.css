@@ -1,0 +1,17 @@
+/* Ek CSS dosyası - dashboard.html'e dahil edilebilir */
+
+.theme-dark {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2d2d2d;
+  --text-primary: #ffffff;
+  --text-secondary: #999999;
+  --accent: #667eea;
+}
+
+.theme-light {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent: #667eea;
+}
