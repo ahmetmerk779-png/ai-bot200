@@ -5,6 +5,13 @@ const AIHandler = require('./ai-handler');
 const Actions = require('./actions');
 const TaskManager = require('./tasks');
 const NPCInteraction = require('./npc-interaction');
+const NPCBehavior = require('./npc-behavior');
+const WorldSystem = require('./world-system');
+const EconomySystem = require('./economy-system');
+const AchievementSystem = require('./achievement-system');
+const DialogueSystem = require('./dialogue-system');
+const AdvancedAI = require('./advanced-ai');
+const Database = require('../database/db');
 const config = require('../utils/config');
 
 class BotCore {
@@ -17,11 +24,31 @@ class BotCore {
     this.actions = null;
     this.taskManager = new TaskManager();
     this.npcInteraction = null;
+    this.npcBehaviors = new Map();
+    this.world = null;
+    this.economy = null;
+    this.achievements = null;
+    this.dialogue = null;
+    this.advancedAI = null;
+    this.db = global.db;
     this.logs = [];
     this.exploredChunks = [];
     this.health = 20;
     this.food = 20;
     this.foodSaturation = 0;
+    this.playerStats = {
+      playtime: 0,
+      blocks_mined: 0,
+      crops_harvested: 0,
+      fish_caught: 0,
+      mobs_killed: 0,
+      distance_traveled: 0,
+      money: 0,
+      quests_completed: 0,
+      high_reputation_npcs: 0,
+      buildings_built: 0,
+      chunks_explored: 0
+    };
   }
 
   async start() {
@@ -37,8 +64,14 @@ class BotCore {
         version: this.settings.mc_version || '1.20.1'
       });
 
+      // Sistemleri başlat
       this.actions = new Actions(this.bot);
       this.npcInteraction = new NPCInteraction(this.bot);
+      this.world = new WorldSystem(this.bot);
+      this.economy = new EconomySystem(this.db);
+      this.achievements = new AchievementSystem(this.db);
+      this.dialogue = new DialogueSystem(this.db);
+      this.advancedAI = new AdvancedAI(this.bot, this.aiHandler, this.db);
 
       // Pathfinder Plugin
       this.bot.loadPlugin(pathfinder);
@@ -51,6 +84,7 @@ class BotCore {
         logger.info(`✅ Bot giriş yaptı: ${this.username}`);
         this.addLog(`Bot giriş yaptı: ${this.username}`);
         this.broadcastStatus();
+        this.initializeNPCs();
       });
 
       this.bot.on('chat', (username, message) => {
@@ -81,6 +115,7 @@ class BotCore {
 
       // Otomatik görevleri başlat
       this.startAutomation();
+      this.startStatTracking();
 
       return true;
     } catch (error) {
@@ -101,11 +136,22 @@ class BotCore {
     }
   }
 
+  async initializeNPCs() {
+    try {
+      // NPC'leri veritabanından yükle
+      const npcs = await this.db.getAllNPCs();
+      npcs.forEach(npc => {
+        this.npcBehaviors.set(npc.name, new NPCBehavior(this.bot, npc, this.db));
+      });
+      this.addLog(`${npcs.length} NPC yüklendi`);
+    } catch (error) {
+      logger.error('NPC başlatma hatası:', error);
+    }
+  }
+
   async handleChatMessage(username, message) {
-    // Eğer kendi mesajıysa göz ardı et
     if (username === this.username) return;
 
-    // AI ile sohbet
     if (message.includes('@bot') || message.includes(`@${this.username}`)) {
       try {
         const response = await this.aiHandler.chat(message);
@@ -115,7 +161,6 @@ class BotCore {
       }
     }
 
-    // Komut kontrolü
     if (message.startsWith('/')) {
       this.handleCommand(message);
     }
@@ -191,8 +236,9 @@ class BotCore {
   async startMining(block) {
     if (!this.actions) return;
     try {
-      this.addLog(`🔨 Madencilik başladı: ${block || 'tümü'}`);
+      this.addLog(`⛏️ Madencilik başladı: ${block || 'tümü'}`);
       await this.actions.mineBlock(block);
+      this.playerStats.blocks_mined += 10; // Simülasyon
     } catch (error) {
       this.addLog(`Madencilik hatası: ${error.message}`, 'error');
     }
@@ -203,6 +249,7 @@ class BotCore {
     try {
       this.addLog(`🌾 Tarım başladı: ${crop || 'buğday'}`);
       await this.actions.farmCrops(crop);
+      this.playerStats.crops_harvested += 5;
     } catch (error) {
       this.addLog(`Tarım hatası: ${error.message}`, 'error');
     }
@@ -213,6 +260,7 @@ class BotCore {
     try {
       this.addLog(`🎣 Balıkçılık başladı`);
       await this.actions.fish();
+      this.playerStats.fish_caught += 1;
     } catch (error) {
       this.addLog(`Balıkçılık hatası: ${error.message}`, 'error');
     }
@@ -223,6 +271,7 @@ class BotCore {
     try {
       this.addLog(`⚔️ Savaş başladı`);
       await this.actions.combat();
+      this.playerStats.mobs_killed += 1;
     } catch (error) {
       this.addLog(`Savaş hatası: ${error.message}`, 'error');
     }
@@ -233,6 +282,7 @@ class BotCore {
     try {
       this.addLog(`🗺️ Harita keşfi başladı`);
       await this.actions.explore();
+      this.playerStats.chunks_explored += 1;
     } catch (error) {
       this.addLog(`Keşif hatası: ${error.message}`, 'error');
     }
@@ -249,21 +299,39 @@ class BotCore {
     // Otomatik beslenme
     setInterval(() => this.handleFeeding(), 60000);
     
-    // Otomatik tarım
-    if (this.settings.auto_farm) {
-      setInterval(() => this.startFarming(), 300000);
-    }
+    // NPC davranışları güncelle
+    setInterval(() => this.updateNPCBehaviors(), 5000);
+    
+    // Başarıları kontrol et
+    setInterval(() => this.checkAchievements(), 30000);
+  }
 
-    // Otomatik balıkçılık
-    if (this.settings.auto_fish) {
-      setInterval(() => this.startFishing(), 600000);
+  startStatTracking() {
+    // Oyuncu istatistikleri izle
+    setInterval(() => {
+      this.playerStats.playtime += 1;
+      this.playerStats.money += Math.random() * 10; // Simülasyon
+    }, 60000); // Her dakika
+  }
+
+  async updateNPCBehaviors() {
+    for (const [name, behavior] of this.npcBehaviors) {
+      await behavior.update();
+    }
+  }
+
+  async checkAchievements() {
+    const unlockedAchievements = await this.achievements.unlockAchievements(1, this.playerStats);
+    if (unlockedAchievements.length > 0) {
+      unlockedAchievements.forEach(ach => {
+        this.bot.chat(`🏆 Başarı açıldı: ${ach.name}`);
+      });
     }
   }
 
   async handleSurvival() {
     if (!this.bot) return;
     
-    // Hasar almışsa iyileştirme
     if (this.bot.health < 18) {
       this.addLog('⚠️ Hasar alındı, iyileştirme başladı');
       this.actions?.drinkPotion();
@@ -274,7 +342,7 @@ class BotCore {
     if (!this.bot) return;
     
     if (this.bot.food < 15) {
-      this.addLog('🍖 Besleniliyor');
+      this.addLog('🍞 Besleniliyor');
       this.actions?.eat();
     }
   }
@@ -299,7 +367,8 @@ class BotCore {
         online: true,
         username: this.username,
         health: this.health,
-        food: this.food
+        food: this.food,
+        stats: this.playerStats
       });
     }
   }
@@ -311,6 +380,10 @@ class BotCore {
     if (this.io) {
       this.io.emit('bot-log', { message, type });
     }
+  }
+
+  get entity() {
+    return this.bot?.entity;
   }
 }
 
