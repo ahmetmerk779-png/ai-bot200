@@ -4,6 +4,7 @@ const logger = require('../utils/logger');
 const AIHandler = require('./ai-handler');
 const Actions = require('./actions');
 const TaskManager = require('./tasks');
+const NPCInteraction = require('./npc-interaction');
 const config = require('../utils/config');
 
 class BotCore {
@@ -15,6 +16,7 @@ class BotCore {
     this.aiHandler = new AIHandler(settings);
     this.actions = null;
     this.taskManager = new TaskManager();
+    this.npcInteraction = null;
     this.logs = [];
     this.exploredChunks = [];
     this.health = 20;
@@ -36,6 +38,7 @@ class BotCore {
       });
 
       this.actions = new Actions(this.bot);
+      this.npcInteraction = new NPCInteraction(this.bot);
 
       // Pathfinder Plugin
       this.bot.loadPlugin(pathfinder);
@@ -141,6 +144,9 @@ class BotCore {
         case 'explore':
           await this.startExploration();
           break;
+        case 'npc':
+          await this.interactWithNPC(parts[1]);
+          break;
         case 'task':
           this.taskManager.addTask(parts.slice(1).join(' '));
           break;
@@ -172,10 +178,20 @@ class BotCore {
     }
   }
 
+  async interactWithNPC(npcName) {
+    if (!this.npcInteraction) return;
+    try {
+      this.addLog(`🧑 ${npcName} ile etkileşim başladı`);
+      await this.npcInteraction.interactWithNPC(npcName);
+    } catch (error) {
+      this.addLog(`NPC etkileşim hatası: ${error.message}`, 'error');
+    }
+  }
+
   async startMining(block) {
     if (!this.actions) return;
     try {
-      this.addLog(`🪓 Madencilik başladı: ${block || 'tümü'}`);
+      this.addLog(`🔨 Madencilik başladı: ${block || 'tümü'}`);
       await this.actions.mineBlock(block);
     } catch (error) {
       this.addLog(`Madencilik hatası: ${error.message}`, 'error');
@@ -247,7 +263,7 @@ class BotCore {
   async handleSurvival() {
     if (!this.bot) return;
     
-    // Hasar almışsa iyileş
+    // Hasar almışsa iyileştirme
     if (this.bot.health < 18) {
       this.addLog('⚠️ Hasar alındı, iyileştirme başladı');
       this.actions?.drinkPotion();

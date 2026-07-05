@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NPC Etkileşim Paneli</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .npc-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .npc-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .npc-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .npc-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .npc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .npc-avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 40px;
+            margin: 0 auto 15px;
+        }
+
+        .npc-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .npc-distance {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .npc-status {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .interact-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .interact-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        /* NPC GUI Modal */
+        .npc-gui-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .npc-gui {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .gui-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+
+        .gui-avatar {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 50px;
+        }
+
+        .gui-npc-info h2 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .gui-npc-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .gui-dialog {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+            font-style: italic;
+            color: #555;
+        }
+
+        .gui-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+            transform: translateY(-2px);
+        }
+
+        .option-icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 12px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #ee5a52;
+        }
+
+        /* Trade GUI */
+        .trade-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .trade-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .trade-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .trade-item-icon {
+            font-size: 32px;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .trade-item-name {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .trade-item-price {
+            color: #667eea;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .trade-item-quantity {
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* Quest GUI */
+        .quest-list {
+            margin-bottom: 20px;
+        }
+
+        .quest-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quest-item:hover {
+            background: #f0f0ff;
+            transform: translateX(5px);
+        }
+
+        .quest-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .quest-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .quest-progress {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .quest-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .quest-status {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .quest-reward {
+            color: #51cf66;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        /* Info GUI */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: #f9f9f9;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .achievement-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .achievement {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #ddd;
+        }
+
+        .achievement.unlocked {
+            border-color: #ffd93d;
+            background: #fffbf0;
+        }
+
+        .achievement-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .achievement-name {
+            font-size: 11px;
+            color: #333;
+        }
+
+        /* Dialog Response */
+        .dialog-response {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #00bcd4;
+        }
+
+        .dialog-response-text {
+            color: #333;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .response-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .response-option {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .response-option:hover {
+            border-color: #00bcd4;
+            background: #e8f4f8;
+        }
+    </style>
+</head>
+<body>
+    <div class="npc-container">
+        <h1 style="color: white; margin-bottom: 30px; text-align: center; font-size: 32px;">🧑 NPC Etkileşim Paneli</h1>
+        
+        <div class="npc-list" id="npcList">
+            <!-- NPC kartları dinamik olarak yüklenecek -->
+        </div>
+    </div>
+
+    <!-- NPC GUI Modal -->
+    <div id="npcGuiModal" class="npc-gui-modal" style="display: none;">
+        <div class="npc-gui" id="npcGui">
+            <!-- İçerik dinamik olarak yüklenecek -->
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let npcList = [];
+        let activeGUI = null;
+
+        // NPC listesini güncelle
+        socket.on('npcs-nearby', (npcs) => {
+            npcList = npcs;
+            renderNPCList(npcs);
+        });
+
+        // NPC GUI aç
+        socket.on('npc-gui-open', (data) => {
+            openNPCGUI(data);
+        });
+
+        // NPC GUI kapat
+        socket.on('npc-gui-close', () => {
+            closeNPCGUI();
+        });
+
+        // Ticaret GUI
+        socket.on('trade-gui-open', (data) => {
+            openTradeGUI(data);
+        });
+
+        // Görev GUI
+        socket.on('quest-gui-open', (data) => {
+            openQuestGUI(data);
+        });
+
+        // Bilgi GUI
+        socket.on('npc-info', (data) => {
+            openInfoGUI(data);
+        });
+
+        // Sohbet diyaloğu
+        socket.on('npc-dialog', (data) => {
+            showDialog(data);
+        });
+
+        function renderNPCList(npcs) {
+            const list = document.getElementById('npcList');
+            if (npcs.length === 0) {
+                list.innerHTML = '<p style="color: white; grid-column: 1/-1; text-align: center;">Yakında NPC yok</p>';
+                return;
+            }
+
+            list.innerHTML = npcs.map(npc => `
+                <div class="npc-card" onclick="interactWithNPC('${npc.username}')">
+                    <div class="npc-avatar">🧑</div>
+                    <div class="npc-name">${npc.username}</div>
+                    <div class="npc-distance">📍 ${Math.round(npc.distance)}m</div>
+                    <div class="npc-status">
+                        <span class="status-badge">✓ Çevrimiçi</span>
+                    </div>
+                    <button class="interact-btn">💬 Etkileşim</button>
+                </div>
+            `).join('');
+        }
+
+        function interactWithNPC(npcName) {
+            socket.emit('interact-npc', npcName);
+        }
+
+        function openNPCGUI(data) {
+            const gui = document.getElementById('npcGui');
+            const dialog = data.dialog;
+            
+            gui.innerHTML = `
+                <div class="gui-header">
+                    <div class="gui-avatar">🧑</div>
+                    <div class="gui-npc-info">
+                        <h2>${data.npc}</h2>
+                        <p>📍 Yakında</p>
+                    </div>
+                </div>
+
+                <div class="gui-dialog">
+                    "${dialog.greeting}"
+                </div>
+
+                <div class="gui-options">
+                    ${data.options.map(opt => `
+                        <button class="option-btn" onclick="handleNPCAction('${data.npc}', '${opt.id}')">
+                            <span class="option-icon">${opt.label.split(' ')[0]}</span>
+                            ${opt.label.split(' ').slice(1).join(' ')}
+                        </button>
+                    `).join('')}
+                </div>
+
+                <button class="close-btn" onclick="closeNPCGUI()">✖️ Kapat</button>
+            `;
+
+            document.getElementById('npcGuiModal').style.display = 'flex';
+            activeGUI = 'npc-interaction';
+        }
+
+        function openTradeGUI(data) {
+            const gui = document.getElementById('npcGui');
+            
+            gui.innerHTML = `
+                <div class="gui-header">
+                    <div class="gui-avatar">💰</div>
+                    <div class="gui-npc-info">
+                        <h2>${data.npc}</h2>
+                        <p>Bakiye: ${data.balance} Altın</p>
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 10px;">📦 Satın Al</h3>
+                <div class="trade-grid">
+                    ${data.items.map(item => `
+                        <div class="trade-item" onclick="buyItem(${item.id})">
+                            <div class="trade-item-icon">💎</div>
+                            <div class="trade-item-name">${item.name}</div>
+                            <div class="trade-item-price">💰 ${item.price} Altın</div>
+                            <div class="trade-item-quantity">📦 ${item.quantity}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button class="close-btn" onclick="closeNPCGUI()">✖️ Geri Dön</button>
+            `;
+
+            document.getElementById('npcGuiModal').style.display = 'flex';
+            activeGUI = 'trade';
+        }
+
+        function openQuestGUI(data) {
+            const gui = document.getElementById('npcGui');
+            
+            gui.innerHTML = `
+                <div class="gui-header">
+                    <div class="gui-avatar">📜</div>
+                    <div class="gui-npc-info">
+                        <h2>${data.npc}</h2>
+                        <p>Görevler</p>
+                    </div>
+                </div>
+
+                <div class="quest-list">
+                    ${data.quests.map(quest => `
+                        <div class="quest-item" onclick="acceptQuest(${quest.id})">
+                            <div class="quest-title">🎯 ${quest.title}</div>
+                            <div class="quest-description">${quest.description}</div>
+                            <div class="quest-progress">
+                                <div class="quest-progress-bar" style="width: ${(quest.progress/quest.total)*100}%"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span class="quest-status">${quest.progress}/${quest.total}</span>
+                                <span class="quest-reward">⭐ ${quest.reward} XP</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button class="close-btn" onclick="closeNPCGUI()">✖️ Geri Dön</button>
+            `;
+
+            document.getElementById('npcGuiModal').style.display = 'flex';
+            activeGUI = 'quest';
+        }
+
+        function openInfoGUI(data) {
+            const gui = document.getElementById('npcGui');
+            
+            gui.innerHTML = `
+                <div class="gui-header">
+                    <div class="gui-avatar">ℹ️</div>
+                    <div class="gui-npc-info">
+                        <h2>${data.username}</h2>
+                        <p>Bilgi Kartı</p>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Konum X</div>
+                        <div class="info-value">${data.position.x}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Konum Y</div>
+                        <div class="info-value">${data.position.y}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Konum Z</div>
+                        <div class="info-value">${data.position.z}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Mesafe</div>
+                        <div class="info-value">${data.distance}m</div>
+                    </div>
+                </div>
+
+                <div style="background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <p style="color: #555; margin-bottom: 10px;">${data.description}</p>
+                </div>
+
+                <h4 style="margin-bottom: 10px;">🏆 Başarılar</h4>
+                <div class="achievement-grid">
+                    ${data.achievements.map(ach => `
+                        <div class="achievement ${ach.unlocked ? 'unlocked' : ''}">
+                            <div class="achievement-icon">${ach.name.split(' ')[0]}</div>
+                            <div class="achievement-name">${ach.name.slice(2)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button class="close-btn" onclick="closeNPCGUI()">✖️ Geri Dön</button>
+            `;
+
+            document.getElementById('npcGuiModal').style.display = 'flex';
+            activeGUI = 'info';
+        }
+
+        function showDialog(data) {
+            const gui = document.getElementById('npcGui');
+            
+            gui.innerHTML = `
+                <div class="gui-header">
+                    <div class="gui-avatar">💬</div>
+                    <div class="gui-npc-info">
+                        <h2>${data.npc}</h2>
+                        <p>Sohbet</p>
+                    </div>
+                </div>
+
+                <div class="dialog-response">
+                    <div class="dialog-response-text">${data.message}</div>
+                    <div class="response-options">
+                        ${data.options.map(opt => `
+                            <button class="response-option">${opt}</button>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <button class="close-btn" onclick="closeNPCGUI()">✖️ Kapat</button>
+            `;
+
+            document.getElementById('npcGuiModal').style.display = 'flex';
+        }
+
+        function handleNPCAction(npcName, action) {
+            socket.emit('npc-action', { npc: npcName, action: action });
+        }
+
+        function closeNPCGUI() {
+            document.getElementById('npcGuiModal').style.display = 'none';
+            socket.emit('npc-action', { npc: null, action: 'close' });
+        }
+
+        function buyItem(itemId) {
+            socket.emit('buy-item', { itemId: itemId });
+            alert(`Ürün #${itemId} satın alındı!`);
+        }
+
+        function acceptQuest(questId) {
+            socket.emit('accept-quest', { questId: questId });
+            alert(`Görev #${questId} kabul edildi!`);
+        }
+
+        // Modal dışında tıklanırsa kapat
+        document.getElementById('npcGuiModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('npcGuiModal')) {
+                closeNPCGUI();
+            }
+        });
+    </script>
+</body>
+</html>
